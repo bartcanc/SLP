@@ -29,4 +29,16 @@ public:
 private:
 	void Move(float AxisValue);
 	void Strafe(float AxisValue);
+
+	UPROPERTY(EditAnywhere)
+	class UStaticMeshComponent* StaticMeshComponent;
+	
+	UPROPERTY(EditAnywhere)
+	class USpringArmComponent* SpringArm;
+
+	UPROPERTY(EditAnywhere)
+	class UCameraComponent* Camera;
+
+	float MoveAxisValue;
+	float StrafeAxisValue;
 };
