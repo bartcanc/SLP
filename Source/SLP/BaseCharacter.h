@@ -29,6 +29,12 @@ public:
 private:
 	void Move(float AxisValue);
 	void Strafe(float AxisValue);
+	void LockOn();
+	void LookUp(float AxisValue);
+	void LookRight(float AxisValue);
+
+	UPROPERTY()
+	class APlayerController* PlayerController;
 
 	UPROPERTY(EditAnywhere)
 	class UStaticMeshComponent* StaticMeshComponent;
@@ -41,4 +47,5 @@ private:
 
 	float MoveAxisValue;
 	float StrafeAxisValue;
+	bool bIsLockedOn;
 };

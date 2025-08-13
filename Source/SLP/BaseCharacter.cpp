@@ -9,6 +9,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Camera/PlayerCameraManager.h"
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -20,26 +21,43 @@ ABaseCharacter::ABaseCharacter()
 	StaticMeshComponent -> SetupAttachment(RootComponent);
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
-	SpringArm -> SetupAttachment(StaticMeshComponent);
+	SpringArm -> SetupAttachment(RootComponent);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera -> SetupAttachment(SpringArm);
 
 	MoveAxisValue = 0.0f;
 	StrafeAxisValue = 0.0f;	
+
+	bIsLockedOn = false;
 }
 
 // Called when the game starts or when spawned
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	PlayerController = Cast<APlayerController>(GetController());
+	if(!PlayerController) return;
 }
 
 // Called every frame
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (bIsLockedOn)
+    {
+        FVector CameraLocation = Camera -> GetComponentLocation();
+		FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
+        FVector DirectionVector = MapCenter - CameraLocation;
+        FRotator TargetCameraRotation = DirectionVector.Rotation();
+
+		FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
+		FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
+		
+		PlayerController->SetControlRotation(NewControlRotation);
+    }
 
 	FVector Velocity = GetVelocity();
 	
@@ -58,8 +76,9 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	PlayerInputComponent -> BindAxis(TEXT("Move"), this, &ABaseCharacter::Move);
 	PlayerInputComponent -> BindAxis(TEXT("Strafe"), this, &ABaseCharacter::Strafe);
-	PlayerInputComponent -> BindAxis(TEXT("LookUp"), this, &APawn::AddControllerPitchInput);
-	PlayerInputComponent -> BindAxis(TEXT("LookRight"), this, &APawn::AddControllerYawInput);
+	PlayerInputComponent -> BindAxis(TEXT("LookUp"), this, &ABaseCharacter::LookUp);
+	PlayerInputComponent -> BindAxis(TEXT("LookRight"), this, &ABaseCharacter::LookRight);
+	PlayerInputComponent -> BindAction(TEXT("LockOn"), EInputEvent::IE_Pressed, this, &ABaseCharacter::LockOn);
 }
 
 void ABaseCharacter::Move(float AxisValue)
@@ -88,6 +107,32 @@ void ABaseCharacter::Strafe(float AxisValue)
 
 		AddMovementInput(Direction, AxisValue);
 	}
+}
+
+void ABaseCharacter::LockOn()
+{
+	UE_LOG(LogTemp, Display, TEXT("MOUSE3 PRESSED"));
+
+	if(!bIsLockedOn)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
+		bIsLockedOn = true;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
+		bIsLockedOn = false;
+	}
+}
+
+void ABaseCharacter::LookUp(float AxisValue)
+{
+	if(!bIsLockedOn) AddControllerPitchInput(AxisValue);
+}
+
+void ABaseCharacter::LookRight(float AxisValue)
+{
+	if(!bIsLockedOn) AddControllerYawInput(AxisValue);
 }
 
 
