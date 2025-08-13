@@ -10,6 +10,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/PlayerCameraManager.h"
+#include "EngineUtils.h"
+#include "BaseAIController.h"
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -50,6 +52,7 @@ void ABaseCharacter::Tick(float DeltaTime)
     {
         FVector CameraLocation = Camera -> GetComponentLocation();
 		FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
+
         FVector DirectionVector = MapCenter - CameraLocation;
         FRotator TargetCameraRotation = DirectionVector.Rotation();
 

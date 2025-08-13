@@ -48,4 +48,7 @@ private:
 	float MoveAxisValue;
 	float StrafeAxisValue;
 	bool bIsLockedOn;
+	
+	UPROPERTY(EditAnywhere)
+	float LockOnRange = 500;
 };
