@@ -50,6 +50,10 @@ void ABaseCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	HandleCamera(DeltaTime);
+	if(bIsLockedOn)
+	{
+		ChangeCameraPositionWhenLockedOn(DeltaTime);
+	}
 }
 
 // Called to bind functionality to input
@@ -66,15 +70,20 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ABaseCharacter::HandleCamera(float DeltaTime)
 {
-	// TODO: when getting out of lock on range, the camera is operable again
 	// TODO: player can't lock on when the enemy is obstructed by a wall
 	if (bIsLockedOn)
     {
-		
 		FVector FocusPoint = NearestActors[ClosestEnemy] -> GetActorLocation();
 		FVector CameraLocation = Camera -> GetComponentLocation();
 
         FVector DirectionVector = FocusPoint - CameraLocation;
+		if(DirectionVector.Length() > LockOnRange) 
+		{
+			bIsLockedOn = false;
+			NearestActors.Empty();
+			SpringArm -> SetRelativeLocation(FVector(0,0,60));
+			return;
+		}
         FRotator TargetCameraRotation = DirectionVector.Rotation();
 
 		FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
@@ -139,6 +148,39 @@ void ABaseCharacter::DoTrace()
 	}
 }
 
+void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
+{
+	if(AxisValue > 1)
+	{
+		if(!NearestActors.IsEmpty() and ClosestEnemy < NearestActors.Num()-1) ClosestEnemy++;
+	}
+	else if(AxisValue < -1)
+	{
+		if(!NearestActors.IsEmpty() and ClosestEnemy > 0) ClosestEnemy--;	
+	}
+}
+
+void ABaseCharacter::ChangeCameraPositionWhenLockedOn(float DeltaTime)	// !!! needs to be tweaked
+{
+	UE_LOG(LogTemp, Warning, TEXT("RightVector: %s"), *GetActorRightVector().ToString());
+	if(
+		(GetActorRightVector().Y > 0 and GetActorRightVector().X > 0) or 
+		(GetActorRightVector().Y < 0 and GetActorRightVector().X < 0) 
+	)	// when moving to the right when locked on, change camera position to the right (5 sec)
+	{		// right
+		FVector TLocation = FMath::VInterpTo(SpringArm -> GetRelativeLocation(), FVector(0,50,60), DeltaTime, 5.f);
+		SpringArm -> SetRelativeLocation(TLocation);
+	}
+	else if(
+		(GetActorRightVector().Y < 0 and GetActorRightVector().X > 0) or 
+		(GetActorRightVector().Y > 0 and GetActorRightVector().X < 0)
+	)	// whem moving to the left, change camera position to the left
+	{		// left
+		FVector TLocation = FMath::VInterpTo(SpringArm -> GetRelativeLocation(), FVector(0,-50,60), DeltaTime, 5.f);
+		SpringArm -> SetRelativeLocation(TLocation);
+	}
+}
+
 void ABaseCharacter::Move(float AxisValue)
 {
 	MoveAxisValue = -AxisValue;
@@ -180,11 +222,13 @@ void ABaseCharacter::LockOn()
 			UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
 			bIsLockedOn = false;
 			NearestActors.Empty();
+			SpringArm -> SetRelativeLocation(FVector(0,0,60));
 		}
 		else
 		{				// lock on
 			UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
 			bIsLockedOn = true;
+			SpringArm -> SetRelativeLocation(FVector(0,50,60));
 		}
 		ClosestEnemy = 0;
 	}
@@ -208,13 +252,6 @@ void ABaseCharacter::LookRight(float AxisValue)
 	}
 	else
 	{
-		if(AxisValue > 1)
-		{
-			if(!NearestActors.IsEmpty() and ClosestEnemy < NearestActors.Num()-1) ClosestEnemy++;
-		}
-		else if(AxisValue < -1)
-		{
-			if(!NearestActors.IsEmpty() and ClosestEnemy > 0) ClosestEnemy--;	
-		}
+		ToggleEnemyWhenLockedOn(AxisValue);
 	}
 }

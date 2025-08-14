@@ -52,7 +52,7 @@ private:
 	bool bIsLockedOn;
 	
 	UPROPERTY(EditAnywhere)
-	float LockOnRange = 700;
+	float LockOnRange = 1000;
 
 	UPROPERTY(EditAnywhere)
 	float SweepRadius = 500;
@@ -61,4 +61,7 @@ private:
 	void DoTrace();
 
 	int32 ClosestEnemy = 0;
+
+	void ToggleEnemyWhenLockedOn(float AxisValue);
+	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
 };
