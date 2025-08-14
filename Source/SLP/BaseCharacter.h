@@ -33,6 +33,8 @@ private:
 	void LookUp(float AxisValue);
 	void LookRight(float AxisValue);
 
+	TArray<struct FHitResult> OutHits;
+
 	UPROPERTY()
 	class APlayerController* PlayerController;
 
@@ -52,5 +54,11 @@ private:
 	UPROPERTY(EditAnywhere)
 	float LockOnRange = 500;
 
+	UPROPERTY(EditAnywhere)
+	float SweepRadius = 500;
+
 	void HandleCamera(float DeltaTime);
+	void DoTrace();
+
+	int32 ClosestEnemy = 0;
 };

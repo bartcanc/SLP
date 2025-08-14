@@ -12,6 +12,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "EngineUtils.h"
 #include "BaseAIController.h"
+#include "Engine/World.h"
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -67,12 +68,12 @@ void ABaseCharacter::HandleCamera(float DeltaTime)
 {
 	if (bIsLockedOn)
     {
-        
-		FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
+		//FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
 
+		FVector FocusPoint = OutHits[ClosestEnemy].GetActor() -> GetActorLocation();
 		FVector CameraLocation = Camera -> GetComponentLocation();
 
-        FVector DirectionVector = MapCenter - CameraLocation;
+        FVector DirectionVector = FocusPoint - CameraLocation;
         FRotator TargetCameraRotation = DirectionVector.Rotation();
 
 		FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
@@ -90,6 +91,46 @@ void ABaseCharacter::HandleCamera(float DeltaTime)
 			FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
 			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
 			SetActorRotation(NewRotation);
+		}
+	}
+}
+
+void ABaseCharacter::DoTrace()
+{
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	FVector StartLocation = Camera -> GetComponentLocation();
+	FVector EndLocation = StartLocation + Camera -> GetForwardVector() * LockOnRange;
+
+	FCollisionShape SweepSphere = FCollisionShape::MakeSphere(SweepRadius);
+
+	if(GetWorld() -> UWorld::SweepMultiByChannel(
+		OutHits, 
+		StartLocation,
+		EndLocation,
+		FQuat::Identity,
+		ECollisionChannel::ECC_GameTraceChannel1,
+		SweepSphere,
+		Params
+	))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trace Successful!"));
+		for (const FHitResult& Hit : OutHits)
+		{
+			if (Hit.GetActor())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *Hit.GetActor()->GetName());
+				// DrawDebugSphere(
+				// 	GetWorld(),
+				// 	Hit.Location,
+				// 	10.0f,
+				// 	12,
+				// 	FColor::Green,
+				// 	false,
+				// 	1.0f
+				// );
+			}
 		}
 	}
 }
@@ -125,16 +166,26 @@ void ABaseCharacter::Strafe(float AxisValue)
 void ABaseCharacter::LockOn()
 {
 	UE_LOG(LogTemp, Display, TEXT("MOUSE3 PRESSED"));
+	DoTrace();
 
-	if(!bIsLockedOn)
+	// was the trace successful?
+	if(!OutHits.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
-		bIsLockedOn = true;
+		if(bIsLockedOn)	// if already locked on
+		{				// lock off and clear the array
+			UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
+			bIsLockedOn = false;
+			ClosestEnemy = 0;
+			//OutHits.Empty();
+		}
+		else
+		{				// lock on
+			UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
+			bIsLockedOn = true;
+		}
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
-		bIsLockedOn = false;
+	else{
+		// TODO: Reset camera
 	}
 }
 
