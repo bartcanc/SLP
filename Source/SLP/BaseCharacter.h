@@ -33,7 +33,7 @@ private:
 	void LookUp(float AxisValue);
 	void LookRight(float AxisValue);
 
-	TArray<struct FHitResult> OutHits;
+	TArray<AActor*> NearestActors;
 
 	UPROPERTY()
 	class APlayerController* PlayerController;
@@ -52,7 +52,7 @@ private:
 	bool bIsLockedOn;
 	
 	UPROPERTY(EditAnywhere)
-	float LockOnRange = 500;
+	float LockOnRange = 700;
 
 	UPROPERTY(EditAnywhere)
 	float SweepRadius = 500;

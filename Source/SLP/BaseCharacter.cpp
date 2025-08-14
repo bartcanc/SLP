@@ -66,11 +66,12 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ABaseCharacter::HandleCamera(float DeltaTime)
 {
+	// TODO: when getting out of lock on range, the camera is operable again
+	// TODO: player can't lock on when the enemy is obstructed by a wall
 	if (bIsLockedOn)
     {
-		//FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
-
-		FVector FocusPoint = OutHits[ClosestEnemy].GetActor() -> GetActorLocation();
+		
+		FVector FocusPoint = NearestActors[ClosestEnemy] -> GetActorLocation();
 		FVector CameraLocation = Camera -> GetComponentLocation();
 
         FVector DirectionVector = FocusPoint - CameraLocation;
@@ -81,7 +82,7 @@ void ABaseCharacter::HandleCamera(float DeltaTime)
 
 		PlayerController -> SetControlRotation(NewControlRotation);
 		SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));		// player facing the lock on point at all times
-		// TODO: when running, dont make player face the lock on point at all times
+		// TODO: when running, don't make player face the lock on point at all times
     }
 	else
 	{
@@ -97,10 +98,12 @@ void ABaseCharacter::HandleCamera(float DeltaTime)
 
 void ABaseCharacter::DoTrace()
 {
+	TArray<FHitResult> OutHits;
+
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 
-	FVector StartLocation = Camera -> GetComponentLocation();
+	FVector StartLocation = GetActorLocation();
 	FVector EndLocation = StartLocation + Camera -> GetForwardVector() * LockOnRange;
 
 	FCollisionShape SweepSphere = FCollisionShape::MakeSphere(SweepRadius);
@@ -116,7 +119,7 @@ void ABaseCharacter::DoTrace()
 	))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Trace Successful!"));
-		for (const FHitResult& Hit : OutHits)
+		for (FHitResult& Hit : OutHits)
 		{
 			if (Hit.GetActor())
 			{
@@ -130,6 +133,7 @@ void ABaseCharacter::DoTrace()
 				// 	false,
 				// 	1.0f
 				// );
+				NearestActors.AddUnique(Hit.GetActor());
 			}
 		}
 	}
@@ -169,23 +173,23 @@ void ABaseCharacter::LockOn()
 	DoTrace();
 
 	// was the trace successful?
-	if(!OutHits.IsEmpty())
+	if(!NearestActors.IsEmpty())
 	{
 		if(bIsLockedOn)	// if already locked on
 		{				// lock off and clear the array
 			UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
 			bIsLockedOn = false;
-			ClosestEnemy = 0;
-			//OutHits.Empty();
+			NearestActors.Empty();
 		}
 		else
 		{				// lock on
 			UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
 			bIsLockedOn = true;
 		}
+		ClosestEnemy = 0;
 	}
 	else{
-		// TODO: Reset camera
+		// TODO: Reset camera to default position (when pressing MOUSE3 if not locked on)
 	}
 }
 
@@ -196,7 +200,21 @@ void ABaseCharacter::LookUp(float AxisValue)
 
 void ABaseCharacter::LookRight(float AxisValue)
 {
-	if(!bIsLockedOn) AddControllerYawInput(AxisValue);
+	UE_LOG(LogTemp, Warning, TEXT("OutHits.Num(): %i"), NearestActors.Num()-1);
+	UE_LOG(LogTemp, Warning, TEXT("ClosestEnemy: %i"), ClosestEnemy);
+	if(!bIsLockedOn) 
+	{
+		AddControllerYawInput(AxisValue);
+	}
+	else
+	{
+		if(AxisValue > 1)
+		{
+			if(!NearestActors.IsEmpty() and ClosestEnemy < NearestActors.Num()-1) ClosestEnemy++;
+		}
+		else if(AxisValue < -1)
+		{
+			if(!NearestActors.IsEmpty() and ClosestEnemy > 0) ClosestEnemy--;	
+		}
+	}
 }
-
-
