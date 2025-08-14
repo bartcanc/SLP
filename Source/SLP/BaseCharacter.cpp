@@ -48,28 +48,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bIsLockedOn)
-    {
-        FVector CameraLocation = Camera -> GetComponentLocation();
-		FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
-
-        FVector DirectionVector = MapCenter - CameraLocation;
-        FRotator TargetCameraRotation = DirectionVector.Rotation();
-
-		FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
-		FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
-		
-		PlayerController->SetControlRotation(NewControlRotation);
-    }
-
-	FVector Velocity = GetVelocity();
-	
-	if (!GetCharacterMovement() -> IsFalling() and Velocity.SizeSquared() > 0.0f)
-	{
-		FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
-		FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
-		SetActorRotation(NewRotation);
-	}
+	HandleCamera(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -84,13 +63,44 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent -> BindAction(TEXT("LockOn"), EInputEvent::IE_Pressed, this, &ABaseCharacter::LockOn);
 }
 
+void ABaseCharacter::HandleCamera(float DeltaTime)
+{
+	if (bIsLockedOn)
+    {
+        
+		FVector MapCenter = FVector::ZeroVector;		// TODO: replace with closest enemy actors array
+
+		FVector CameraLocation = Camera -> GetComponentLocation();
+
+        FVector DirectionVector = MapCenter - CameraLocation;
+        FRotator TargetCameraRotation = DirectionVector.Rotation();
+
+		FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
+		FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
+
+		PlayerController -> SetControlRotation(NewControlRotation);
+		SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));		// player facing the lock on point at all times
+		// TODO: when running, dont make player face the lock on point at all times
+    }
+	else
+	{
+		FVector Velocity = GetVelocity();
+		if (!GetCharacterMovement() -> IsFalling() and Velocity.SizeSquared() > 0.0f)
+		{
+			FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
+			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
+			SetActorRotation(NewRotation);
+		}
+	}
+}
+
 void ABaseCharacter::Move(float AxisValue)
 {
 	MoveAxisValue = -AxisValue;
 
-	if (Controller)
+	if (PlayerController)
 	{
-		const FRotator Rotation = Controller -> GetControlRotation();		// controller rotation
+		const FRotator Rotation = PlayerController -> GetControlRotation();		// controller rotation
 		const FRotator YawRotation(0, Rotation.Yaw, 0);						// extracting yaw
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);	// extracting direction
 
@@ -102,9 +112,9 @@ void ABaseCharacter::Strafe(float AxisValue)
 {
 	StrafeAxisValue = -AxisValue;
 	
-	if (Controller)
+	if (PlayerController)
 	{
-		const FRotator Rotation = Controller -> GetControlRotation();
+		const FRotator Rotation = PlayerController -> GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 

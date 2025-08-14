@@ -51,4 +51,6 @@ private:
 	
 	UPROPERTY(EditAnywhere)
 	float LockOnRange = 500;
+
+	void HandleCamera(float DeltaTime);
 };
