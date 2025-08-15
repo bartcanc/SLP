@@ -27,11 +27,46 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 private:
-	void Move(float AxisValue);
-	void Strafe(float AxisValue);
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+    class UInputMappingContext * InputMapping;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputMove;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputStrafe;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputLookUp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputLookRight;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputLockOn;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputCameraRightLockedOn;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputCameraLeftLockedOn;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputRunDashRoll;
+
+	void Move(const struct FInputActionValue & Value);
+	void Strafe(const struct FInputActionValue & Value);
+	void LookUp(const struct FInputActionValue & Value);
+	void LookRight(const struct FInputActionValue & Value);
+	void DetermineCameraPlacement(const struct FInputActionValue & Value);
+	void Sprint(const struct FInputActionValue & Value);
+	void Roll(const struct FInputActionValue & Value);
+
+	bool bCameraOnTheRightLockedOn;
+
 	void LockOn();
-	void LookUp(float AxisValue);
-	void LookRight(float AxisValue);
+	void ToggleEnemyWhenLockedOn(float AxisValue);
+	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
 
 	TArray<AActor*> NearestActors;
 
@@ -55,13 +90,13 @@ private:
 	float LockOnRange = 1000;
 
 	UPROPERTY(EditAnywhere)
-	float SweepRadius = 500;
+	float SweepRadius = 300;
 
 	void HandleCamera(float DeltaTime);
 	void DoTrace();
 
 	int32 ClosestEnemy = 0;
-
-	void ToggleEnemyWhenLockedOn(float AxisValue);
-	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
+	bool bIsPlayerRunning = false;
+	UPROPERTY(EditAnywhere)
+	float RunSpeed = 20.f;
 };
