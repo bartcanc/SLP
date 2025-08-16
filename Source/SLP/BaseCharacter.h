@@ -67,7 +67,10 @@ private:
 	void LockOn();
 	void ToggleEnemyWhenLockedOn(float AxisValue);
 	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
-
+	void HandleMovementWhenLockedOn(float DeltaTime, FRotator NewControlRotation);
+	void HandleMovement(float DeltaTime);
+	void HandleLockOnCamera(float DeltaTime);
+	void DoTrace();
 	TArray<AActor*> NearestActors;
 
 	UPROPERTY()
@@ -92,11 +95,9 @@ private:
 	UPROPERTY(EditAnywhere)
 	float SweepRadius = 300;
 
-	void HandleCamera(float DeltaTime);
-	void DoTrace();
-
 	int32 ClosestEnemy = 0;
 	bool bIsPlayerRunning = false;
 	UPROPERTY(EditAnywhere)
 	float RunSpeed = 20.f;
+	bool bResetCamera = false;
 };

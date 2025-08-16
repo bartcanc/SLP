@@ -54,10 +54,14 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	HandleCamera(DeltaTime);
 	if(bIsLockedOn)
 	{
+		HandleLockOnCamera(DeltaTime);
 		ChangeCameraPositionWhenLockedOn(DeltaTime);
+	}
+	else
+	{
+		HandleMovement(DeltaTime);
 	}
 }
 
@@ -85,46 +89,27 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 }
 
-void ABaseCharacter::HandleCamera(float DeltaTime)
+void ABaseCharacter::HandleLockOnCamera(float DeltaTime)
 {
-	// TODO: player can't lock on when the enemy is obstructed by a wall
-	if (bIsLockedOn)
-    {
-		FVector FocusPoint = NearestActors[ClosestEnemy] -> GetActorLocation();
-		FVector CameraLocation = Camera -> GetComponentLocation();
+	FVector FocusPoint = NearestActors[ClosestEnemy] -> GetActorLocation();
+	FVector CameraLocation = Camera -> GetComponentLocation();
 
-        FVector DirectionVector = FocusPoint - CameraLocation;
-		if(DirectionVector.Length() > LockOnRange) 	// if the player leaves the lock on range
-		{
-			bIsLockedOn = false;		// leave the locked on state
-			NearestActors.Empty();
-			SpringArm -> SetRelativeLocation(FVector(0, 0, 60));
-			return;
-		}
-        FRotator TargetCameraRotation = DirectionVector.Rotation();
-
-		FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
-		FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
-
-		PlayerController -> SetControlRotation(NewControlRotation);
-		if(!bIsPlayerRunning) SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));		// player facing the lock on point at all times
-		else
-		{
-			FRotator TargetRotation = FRotationMatrix::MakeFromX(GetVelocity()).Rotator();
-			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);
-			SetActorRotation(NewRotation);	
-		}// TODO: when running, don't make player face the lock on point at all times
-    }
-	else
+	FVector DirectionVector = FocusPoint - CameraLocation;
+	if(DirectionVector.Length() > LockOnRange or NearestActors[0]->ActorHasTag("IsWall")) 	// if the player leaves the lock on range or a wall is the nearest actor
 	{
-		FVector Velocity = GetVelocity();
-		if (!GetCharacterMovement() -> IsFalling() and Velocity.SizeSquared() > 0.0f)
-		{
-			FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
-			FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
-			SetActorRotation(NewRotation);
-		}
+		bIsLockedOn = false;		// leave the locked on state
+		NearestActors.Empty();
+		SpringArm -> SetRelativeLocation(FVector(0, 0, 80));
+		return;
 	}
+	FRotator TargetCameraRotation = DirectionVector.Rotation();
+
+	FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
+	FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
+
+	PlayerController -> SetControlRotation(NewControlRotation);
+    
+	HandleMovementWhenLockedOn(DeltaTime, NewControlRotation);
 }
 
 void ABaseCharacter::DoTrace()
@@ -154,7 +139,12 @@ void ABaseCharacter::DoTrace()
 		{
 			if (Hit.GetActor())
 			{
-				//UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *Hit.GetActor()->GetName());
+				UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *Hit.GetActor()->GetName());
+				if(Hit.GetActor() -> ActorHasTag("IsWall"))
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Hit a wall!"));
+				}
+				//if(Hit.GetActor() -> ActorHasTag("Enemy")) 
 				NearestActors.AddUnique(Hit.GetActor());
 			}
 		}
@@ -166,7 +156,7 @@ void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
 {
 	if(!NearestActors.IsEmpty())
 	{
-		ClosestEnemy = abs(++ClosestEnemy) % NearestActors.Num();
+		ClosestEnemy = abs(++ClosestEnemy) % NearestActors.Num();	// ensure that the index doesn't go out of bounds
 	}
 }
 
@@ -175,15 +165,41 @@ void ABaseCharacter::ChangeCameraPositionWhenLockedOn(float DeltaTime)
 	//UE_LOG(LogTemp, Warning, TEXT("RightVector: %s"), *GetActorRightVector().ToString());
 
 	float Direction = 1;
-	if(bCameraOnTheRightLockedOn)
-	{		// right
-		Direction = 1;
-	}
-	else{	// left
-		Direction = -1;
-	}
-	FVector TLocation = FMath::VInterpTo(SpringArm -> GetRelativeLocation(), FVector(0, Direction*50, 60), DeltaTime, 5.f);
+	if(bCameraOnTheRightLockedOn)	Direction = 1;	// right
+	else Direction = -1;	// left
+	
+	FVector TLocation = FMath::VInterpTo(SpringArm -> GetRelativeLocation(), FVector(0, Direction*20, 80), DeltaTime, 5.f);
 	SpringArm -> SetRelativeLocation(TLocation);
+}
+
+void ABaseCharacter::HandleMovementWhenLockedOn(float DeltaTime, FRotator NewControlRotation)
+{	
+// if the player is not running
+	if(!bIsPlayerRunning)
+	{
+//  	set actor rotation to face the lock on point
+		SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));
+	}
+	else
+	{
+//  	set actor rotation to the new rotation
+		HandleMovement(DeltaTime);	// normal rotation when running
+	}
+}
+
+void ABaseCharacter::HandleMovement(float DeltaTime)
+{
+	FVector Velocity = GetVelocity();
+	FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
+	FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
+
+	// if not locked on
+	if(!GetCharacterMovement() -> IsFalling() and Velocity.SizeSquared() > 0.0f) 
+	{
+		// if not falling and velocity is greater than 0
+		//  	set actor rotation to the new rotation
+		SetActorRotation(NewRotation);
+	}	
 }
 
 void ABaseCharacter::Move(const FInputActionValue & Value)	// refactored to use FInputActionValue
@@ -203,7 +219,7 @@ void ABaseCharacter::Move(const FInputActionValue & Value)	// refactored to use 
 		}
 		else 
 		{
-			AddMovementInput(Direction, 0.7 * MoveAxisValue);	// temporary solution, do research (speed increases when going diagonally))
+			AddMovementInput(Direction, 0.7 * MoveAxisValue);	// TODO: temporary solution, do research (speed increases when going diagonally))
 		}
 		
 	}
@@ -244,18 +260,19 @@ void ABaseCharacter::LockOn()	// refactored to use FInputActionValue
 			UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
 			bIsLockedOn = false;
 			NearestActors.Empty();
-			SpringArm -> SetRelativeLocation(FVector(0, 0, 60));
+			SpringArm -> SetRelativeLocation(FVector(0, 0, 80));
 		}
 		else
 		{				// lock on
 			UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
 			bIsLockedOn = true;
-			SpringArm -> SetRelativeLocation(FVector(0, 50, 60));
+			SpringArm -> SetRelativeLocation(FVector(0, 20, 80));
 		}
 		ClosestEnemy = 0;
 	}
 	else{
 		// TODO: Reset camera to default position (when pressing MOUSE3 if not locked on)
+		PlayerController -> SetControlRotation(GetActorForwardVector().Rotation());
 	}
 }
 
@@ -272,14 +289,9 @@ void ABaseCharacter::LookRight(const FInputActionValue & Value)	// refactored to
 	//UE_LOG(LogTemp, Display, TEXT("Look Right value: %f"), AxisValue);
 	UE_LOG(LogTemp, Warning, TEXT("OutHits.Num(): %i"), NearestActors.Num()-1);
 	UE_LOG(LogTemp, Warning, TEXT("ClosestEnemy: %i"), ClosestEnemy);
-	if(!bIsLockedOn) 
-	{
-		AddControllerYawInput(AxisValue);
-	}
-	else
-	{
-		ToggleEnemyWhenLockedOn(AxisValue);
-	}
+
+	if(!bIsLockedOn) AddControllerYawInput(AxisValue);
+	else ToggleEnemyWhenLockedOn(AxisValue);
 }
 
 void ABaseCharacter::DetermineCameraPlacement(const FInputActionValue & Value)
@@ -303,7 +315,6 @@ void ABaseCharacter::DetermineCameraPlacement(const FInputActionValue & Value)
 
 void ABaseCharacter::Sprint(const FInputActionValue & Value)
 {
-
 	//UE_LOG(LogTemp, Display, TEXT("Velocity value: %f"), GetVelocity().SizeSquared());
 	if(GetVelocity().SizeSquared() > 0.0f)
 	{
