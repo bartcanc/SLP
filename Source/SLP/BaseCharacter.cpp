@@ -143,9 +143,9 @@ void ABaseCharacter::DoTrace()
 				if(Hit.GetActor() -> ActorHasTag("IsWall"))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Hit a wall!"));
+					NearestActors.AddUnique(Hit.GetActor());
 				}
-				//if(Hit.GetActor() -> ActorHasTag("Enemy")) 
-				NearestActors.AddUnique(Hit.GetActor());
+				if(Hit.GetActor() -> ActorHasTag("Enemy")) NearestActors.AddUnique(Hit.GetActor());
 			}
 		}
 		UE_LOG(LogTemp, Warning, TEXT("Nearest Actors Count: %d"), NearestActors.Num());
