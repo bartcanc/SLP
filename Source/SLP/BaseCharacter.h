@@ -63,8 +63,10 @@ private:
 	void LookRight(const struct FInputActionValue & Value);
 	void DetermineCameraPlacement(const struct FInputActionValue & Value);
 	void Sprint(const struct FInputActionValue & Value);
-	void Roll(const struct FInputActionValue & Value);
+	void StartRoll(const struct FInputActionValue & Value);
+	void PerformRoll(float DeltaTime);
 
+	void ApplyMovement();
 	void LockOn();
 	void ToggleEnemyWhenLockedOn(float AxisValue);
 	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
@@ -109,10 +111,10 @@ private:
 	float RunSpeed = 20.f;
 	
 	UPROPERTY(EditAnywhere)
-	float BackstepModifier = -5000.f;
+	float BackstepModifier = -1500.f;
 	
 	UPROPERTY(EditAnywhere)
-	float RollModifier = 10.f;
+	float RollModifier = 1500.f;
 	
 	UPROPERTY(EditAnywhere)
 	float MaxFallingSpeed = 1500.f;

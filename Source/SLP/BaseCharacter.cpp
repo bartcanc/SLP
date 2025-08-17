@@ -60,25 +60,10 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
+	ApplyMovement();
+	MoveAxisValue = 0.0f;
+    StrafeAxisValue = 0.0f;
 	bIsGrounded = !GetCharacterMovement() -> IsFalling();
-
-	// UE_LOG(LogTemp, Warning, TEXT("Is Rolling: %s"), bIsRolling ? TEXT("true") : TEXT("false"));
-	if (bIsRolling)
-    {
-        if (GetCharacterMovement()->Velocity.Size() < 10.0f or bIsGrounded)
-        {
-            bIsRolling = false;
-        }
-    }
-
-	if (!bIsGrounded and !bIsRolling)	// TODO: this may not work
-    {
-        FVector Velocity = GetCharacterMovement()->Velocity;
-        if (Velocity.Size() > MaxFallingSpeed)
-        {
-            GetCharacterMovement() -> Velocity = Velocity.GetSafeNormal() * MaxFallingSpeed;
-        }
-    }
 	
 	if(bIsLockedOn)
 	{
@@ -89,6 +74,8 @@ void ABaseCharacter::Tick(float DeltaTime)
 	{
 		HandleMovement(DeltaTime);
 	}
+
+	PerformRoll(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -110,7 +97,7 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerEIComponent -> BindAction(InputCameraRightLockedOn, ETriggerEvent::Triggered, this, &ABaseCharacter::DetermineCameraPlacement);
 	PlayerEIComponent -> BindAction(InputCameraLeftLockedOn, ETriggerEvent::Triggered, this, &ABaseCharacter::DetermineCameraPlacement);
 
-	PlayerEIComponent -> BindAction(InputRoll, ETriggerEvent::Triggered, this, &ABaseCharacter::Roll);
+	PlayerEIComponent -> BindAction(InputRoll, ETriggerEvent::Completed, this, &ABaseCharacter::StartRoll);
 	PlayerEIComponent -> BindAction(InputRunDash, ETriggerEvent::Triggered, this, &ABaseCharacter::Sprint);
 
 }
@@ -167,6 +154,7 @@ void ABaseCharacter::DoTrace()
 				if(Hit.GetActor() -> ActorHasTag("IsWall"))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Hit a wall!"));
+					break;
 				}
 				if(Hit.GetActor() -> ActorHasTag("Enemy")) NearestActors.AddUnique(Hit.GetActor());
 			}
@@ -225,49 +213,36 @@ void ABaseCharacter::HandleMovement(float DeltaTime)
 	}	
 }
 
-void ABaseCharacter::Move(const FInputActionValue & Value)	// refactored to use FInputActionValue
+void ABaseCharacter::Move(const FInputActionValue & Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("Move value: %f"), Value.Get<float>());
-	MoveAxisValue = Value.Get<float>();
-
-	if (PlayerController)
-	{
-		const FRotator Rotation = PlayerController -> GetControlRotation();		// controller rotation
-		const FRotator YawRotation(0, Rotation.Yaw, 0);						// extracting yaw
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);	// extracting direction
-
-		if(bIsPlayerRunning) 
-		{
-			AddMovementInput(Direction, MoveAxisValue);
-		}
-		else 
-		{
-			AddMovementInput(Direction, 0.7 * MoveAxisValue);	// TODO: temporary solution, do research (speed increases when going diagonally))
-		}
-		
-	}
+    MoveAxisValue = Value.Get<float>();
 }
 
-void ABaseCharacter::Strafe(const FInputActionValue & Value)	// refactored to use FInputActionValue
+void ABaseCharacter::Strafe(const FInputActionValue & Value)
 {
-	UE_LOG(LogTemp, Display, TEXT("Strafe value: %f"), Value.Get<float>());
-	StrafeAxisValue = Value.Get<float>();
-	
-	if (PlayerController)
-	{
-		const FRotator Rotation = PlayerController -> GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+    StrafeAxisValue = Value.Get<float>();
+}
 
-		if(bIsPlayerRunning) 
-		{
-			AddMovementInput(Direction, StrafeAxisValue);
-		}
-		else 
-		{
-			AddMovementInput(Direction, 0.7 * StrafeAxisValue);
-		}
-	}
+void ABaseCharacter::ApplyMovement()
+{
+    if (!PlayerController) return;
+
+    const FRotator Rotation = PlayerController->GetControlRotation();
+    const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+    const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+    const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+	// determining the direction
+    FVector InputVector = (ForwardDirection * MoveAxisValue) + (RightDirection * StrafeAxisValue);
+
+    if (InputVector.SizeSquared() > 0.0f)
+    {
+        InputVector = InputVector.GetSafeNormal();
+
+        float SpeedScale = bIsPlayerRunning ? 1.0f : 0.7f;
+        AddMovementInput(InputVector, SpeedScale);
+    }
 }
 
 void ABaseCharacter::LockOn()	// refactored to use FInputActionValue
@@ -295,7 +270,7 @@ void ABaseCharacter::LockOn()	// refactored to use FInputActionValue
 	}
 	else{
 		// TODO: Reset camera to default position (when pressing MOUSE3 if not locked on)
-		PlayerController -> SetControlRotation(GetActorForwardVector().Rotation());
+		PlayerController -> SetControlRotation(GetActorForwardVector().Rotation());	// doesnt work when facing a wall
 	}
 }
 
@@ -346,26 +321,40 @@ void ABaseCharacter::Sprint(const FInputActionValue & Value)
 	} 
 }
 
-void ABaseCharacter::Roll(const FInputActionValue & Value)
+void ABaseCharacter::StartRoll(const FInputActionValue & Value)
 {
-	// TODO: tweak this method, when going off the edge in certain conditions the character flies off
-	// TODO: add i-frames
-	UE_LOG(LogTemp, Display, TEXT("Roll tapped!"));
-	if(!bIsGrounded) return;
+	bIsRolling = true;
+	GetCharacterMovement()->GroundFriction = 0.0f;
+	GetCharacterMovement()->GravityScale = 0.0f;
+	UE_LOG(LogTemp, Display, TEXT("Roll started!"));
+}
 
-	if(GetVelocity().SizeSquared() == 0.0f)		// backstep (character not moving)
-	{	
-		FVector ForwardRotation = FVector(Camera -> GetForwardVector().X, Camera -> GetForwardVector().Y, 0).GetSafeNormal();
-		UE_LOG(LogTemp, Display, TEXT("Backstep Vector: %s"), *(BackstepModifier * ForwardRotation).ToString());
-		GetCharacterMovement() -> AddImpulse(ForwardRotation * BackstepModifier, true);	// add impulse to the character
-		bIsRolling = true;
+void ABaseCharacter::PerformRoll(float DeltaTime)
+{	// TODO: when dodging up the edge of a slope, the player is launched far away
+    if (!bIsGrounded or !bIsRolling) return;
+
+    FVector RollDirection;
+    float RollStrength;
+
+	const FFindFloorResult& FloorResult = GetCharacterMovement()->CurrentFloor;
+    FVector FloorNormal = FloorResult.IsWalkableFloor() ? FloorResult.HitResult.ImpactNormal : FVector::UpVector;
+
+    if (GetVelocity().SizeSquared() == 0.0f) // backstep
+    {
+       FVector Forward = FVector(Camera->GetForwardVector().X, Camera->GetForwardVector().Y, 0).GetSafeNormal();
+        RollDirection = FVector::VectorPlaneProject(Forward, FloorNormal).GetSafeNormal();
+        RollStrength = BackstepModifier;
+    }
+    else // directional roll
+    {
+		FVector CurrentVelocity = GetVelocity();
+        FVector HorizontalVelocity = FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.f);
+		RollDirection = FVector::VectorPlaneProject(HorizontalVelocity.GetSafeNormal(), FloorNormal).GetSafeNormal();
+        RollStrength = RollModifier;
 	}
-	else										// directional roll (character is moving)
-	{
-		FVector ForwardRotation = GetVelocity();
-		GetCharacterMovement() -> Velocity = FVector::ZeroVector;	// stop the character
-		UE_LOG(LogTemp, Display, TEXT("Roll Vector: %s"), *(RollModifier * ForwardRotation).ToString());
-		GetCharacterMovement() -> AddImpulse(ForwardRotation * RollModifier, true);	// add impulse to the character
-		bIsRolling = true;
-	}
+
+    LaunchCharacter(RollDirection * RollStrength, true, false);
+	GetCharacterMovement() -> GroundFriction = 8.f;
+	GetCharacterMovement() -> GravityScale = 1.0f;
+    bIsRolling = false;
 }
