@@ -62,7 +62,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 	
 	bIsGrounded = !GetCharacterMovement() -> IsFalling();
 
-	UE_LOG(LogTemp, Warning, TEXT("Is Rolling: %s"), bIsRolling ? TEXT("true") : TEXT("false"));
+	// UE_LOG(LogTemp, Warning, TEXT("Is Rolling: %s"), bIsRolling ? TEXT("true") : TEXT("false"));
 	if (bIsRolling)
     {
         if (GetCharacterMovement()->Velocity.Size() < 10.0f or bIsGrounded)
@@ -350,20 +350,22 @@ void ABaseCharacter::Roll(const FInputActionValue & Value)
 {
 	// TODO: tweak this method, when going off the edge in certain conditions the character flies off
 	// TODO: add i-frames
-	FVector ForwardRotation = FVector(Camera -> GetForwardVector().X, Camera -> GetForwardVector().Y, 0).GetSafeNormal();
 	UE_LOG(LogTemp, Display, TEXT("Roll tapped!"));
 	if(!bIsGrounded) return;
 
 	if(GetVelocity().SizeSquared() == 0.0f)		// backstep (character not moving)
-	{
+	{	
+		FVector ForwardRotation = FVector(Camera -> GetForwardVector().X, Camera -> GetForwardVector().Y, 0).GetSafeNormal();
 		UE_LOG(LogTemp, Display, TEXT("Backstep Vector: %s"), *(BackstepModifier * ForwardRotation).ToString());
 		GetCharacterMovement() -> AddImpulse(ForwardRotation * BackstepModifier, true);	// add impulse to the character
 		bIsRolling = true;
 	}
 	else										// directional roll (character is moving)
 	{
+		FVector ForwardRotation = GetVelocity();
+		GetCharacterMovement() -> Velocity = FVector::ZeroVector;	// stop the character
 		UE_LOG(LogTemp, Display, TEXT("Roll Vector: %s"), *(RollModifier * ForwardRotation).ToString());
-		GetCharacterMovement() -> AddImpulse(GetVelocity() * RollModifier, true);	// add impulse to the character
+		GetCharacterMovement() -> AddImpulse(ForwardRotation * RollModifier, true);	// add impulse to the character
 		bIsRolling = true;
 	}
 }
