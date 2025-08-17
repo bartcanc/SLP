@@ -52,7 +52,10 @@ private:
 	class UInputAction * InputCameraLeftLockedOn;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
-	class UInputAction * InputRunDashRoll;
+	class UInputAction * InputRunDash;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputRoll;
 
 	void Move(const struct FInputActionValue & Value);
 	void Strafe(const struct FInputActionValue & Value);
@@ -62,8 +65,6 @@ private:
 	void Sprint(const struct FInputActionValue & Value);
 	void Roll(const struct FInputActionValue & Value);
 
-	bool bCameraOnTheRightLockedOn;
-
 	void LockOn();
 	void ToggleEnemyWhenLockedOn(float AxisValue);
 	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
@@ -71,7 +72,10 @@ private:
 	void HandleMovement(float DeltaTime);
 	void HandleLockOnCamera(float DeltaTime);
 	void DoTrace();
+
+	TArray<struct FHitResult> OutHits;
 	TArray<AActor*> NearestActors;
+	int32 ClosestEnemy = 0;
 
 	UPROPERTY()
 	class APlayerController* PlayerController;
@@ -87,17 +91,29 @@ private:
 
 	float MoveAxisValue;
 	float StrafeAxisValue;
+
 	bool bIsLockedOn;
+	bool bIsGrounded;
+	bool bIsPlayerRunning;
+	bool bResetCamera;
+	bool bCameraOnTheRightLockedOn;
+	bool bIsRolling;
 	
 	UPROPERTY(EditAnywhere)
 	float LockOnRange = 1000;
 
 	UPROPERTY(EditAnywhere)
 	float SweepRadius = 300;
-
-	int32 ClosestEnemy = 0;
-	bool bIsPlayerRunning = false;
+	
 	UPROPERTY(EditAnywhere)
 	float RunSpeed = 20.f;
-	bool bResetCamera = false;
+	
+	UPROPERTY(EditAnywhere)
+	float BackstepModifier = -5000.f;
+	
+	UPROPERTY(EditAnywhere)
+	float RollModifier = 10.f;
+	
+	UPROPERTY(EditAnywhere)
+	float MaxFallingSpeed = 1500.f;
 };

@@ -38,6 +38,12 @@ ABaseCharacter::ABaseCharacter()
 
 	bIsLockedOn = false;
 	bCameraOnTheRightLockedOn = false;
+	bIsGrounded = true;
+	bIsPlayerRunning = false;
+	bResetCamera = false;
+	bIsRolling = false;
+
+	GetCharacterMovement()->MaxFlySpeed = 5.0f;
 }
 
 // Called when the game starts or when spawned
@@ -53,6 +59,26 @@ void ABaseCharacter::BeginPlay()
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	bIsGrounded = !GetCharacterMovement() -> IsFalling();
+
+	UE_LOG(LogTemp, Warning, TEXT("Is Rolling: %s"), bIsRolling ? TEXT("true") : TEXT("false"));
+	if (bIsRolling)
+    {
+        if (GetCharacterMovement()->Velocity.Size() < 10.0f or bIsGrounded)
+        {
+            bIsRolling = false;
+        }
+    }
+
+	if (!bIsGrounded and !bIsRolling)	// TODO: this may not work
+    {
+        FVector Velocity = GetCharacterMovement()->Velocity;
+        if (Velocity.Size() > MaxFallingSpeed)
+        {
+            GetCharacterMovement() -> Velocity = Velocity.GetSafeNormal() * MaxFallingSpeed;
+        }
+    }
 	
 	if(bIsLockedOn)
 	{
@@ -84,8 +110,8 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerEIComponent -> BindAction(InputCameraRightLockedOn, ETriggerEvent::Triggered, this, &ABaseCharacter::DetermineCameraPlacement);
 	PlayerEIComponent -> BindAction(InputCameraLeftLockedOn, ETriggerEvent::Triggered, this, &ABaseCharacter::DetermineCameraPlacement);
 
-	PlayerEIComponent -> BindAction(InputRunDashRoll, ETriggerEvent::Started, this, &ABaseCharacter::Roll);
-	PlayerEIComponent -> BindAction(InputRunDashRoll, ETriggerEvent::Triggered, this, &ABaseCharacter::Sprint);
+	PlayerEIComponent -> BindAction(InputRoll, ETriggerEvent::Triggered, this, &ABaseCharacter::Roll);
+	PlayerEIComponent -> BindAction(InputRunDash, ETriggerEvent::Triggered, this, &ABaseCharacter::Sprint);
 
 }
 
@@ -95,7 +121,7 @@ void ABaseCharacter::HandleLockOnCamera(float DeltaTime)
 	FVector CameraLocation = Camera -> GetComponentLocation();
 
 	FVector DirectionVector = FocusPoint - CameraLocation;
-	if(DirectionVector.Length() > LockOnRange or NearestActors[0]->ActorHasTag("IsWall")) 	// if the player leaves the lock on range or a wall is the nearest actor
+	if(DirectionVector.Length() > LockOnRange or OutHits[0].GetActor()->ActorHasTag("IsWall")) 	// if the player leaves the lock on range or a wall is the nearest actor
 	{
 		bIsLockedOn = false;		// leave the locked on state
 		NearestActors.Empty();
@@ -114,8 +140,6 @@ void ABaseCharacter::HandleLockOnCamera(float DeltaTime)
 
 void ABaseCharacter::DoTrace()
 {
-	TArray<FHitResult> OutHits;
-
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 
@@ -143,7 +167,6 @@ void ABaseCharacter::DoTrace()
 				if(Hit.GetActor() -> ActorHasTag("IsWall"))
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Hit a wall!"));
-					NearestActors.AddUnique(Hit.GetActor());
 				}
 				if(Hit.GetActor() -> ActorHasTag("Enemy")) NearestActors.AddUnique(Hit.GetActor());
 			}
@@ -194,7 +217,7 @@ void ABaseCharacter::HandleMovement(float DeltaTime)
 	FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
 
 	// if not locked on
-	if(!GetCharacterMovement() -> IsFalling() and Velocity.SizeSquared() > 0.0f) 
+	if(bIsGrounded and Velocity.SizeSquared() > 0.0f) 
 	{
 		// if not falling and velocity is greater than 0
 		//  	set actor rotation to the new rotation
@@ -325,5 +348,22 @@ void ABaseCharacter::Sprint(const FInputActionValue & Value)
 
 void ABaseCharacter::Roll(const FInputActionValue & Value)
 {
+	// TODO: tweak this method, when going off the edge in certain conditions the character flies off
+	// TODO: add i-frames
+	FVector ForwardRotation = FVector(Camera -> GetForwardVector().X, Camera -> GetForwardVector().Y, 0).GetSafeNormal();
 	UE_LOG(LogTemp, Display, TEXT("Roll tapped!"));
+	if(!bIsGrounded) return;
+
+	if(GetVelocity().SizeSquared() == 0.0f)		// backstep (character not moving)
+	{
+		UE_LOG(LogTemp, Display, TEXT("Backstep Vector: %s"), *(BackstepModifier * ForwardRotation).ToString());
+		GetCharacterMovement() -> AddImpulse(ForwardRotation * BackstepModifier, true);	// add impulse to the character
+		bIsRolling = true;
+	}
+	else										// directional roll (character is moving)
+	{
+		UE_LOG(LogTemp, Display, TEXT("Roll Vector: %s"), *(RollModifier * ForwardRotation).ToString());
+		GetCharacterMovement() -> AddImpulse(GetVelocity() * RollModifier, true);	// add impulse to the character
+		bIsRolling = true;
+	}
 }
