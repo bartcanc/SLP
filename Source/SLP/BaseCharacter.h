@@ -91,6 +91,9 @@ private:
 	UPROPERTY(EditAnywhere)
 	class UCameraComponent* Camera;
 
+	UPROPERTY(EditAnywhere)
+	class UAnimBlueprint* PlayerAnimBP;
+
 	float MoveAxisValue;
 	float StrafeAxisValue;
 
@@ -118,4 +121,7 @@ private:
 	
 	UPROPERTY(EditAnywhere)
 	float MaxFallingSpeed = 1500.f;
+
+	UFUNCTION(BlueprintPure)
+	float GetSpeed() const;
 };

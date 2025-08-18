@@ -17,6 +17,7 @@
 #include "InputAction.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Animation/AnimBlueprint.h"	
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -42,8 +43,6 @@ ABaseCharacter::ABaseCharacter()
 	bIsPlayerRunning = false;
 	bResetCamera = false;
 	bIsRolling = false;
-
-	GetCharacterMovement()->MaxFlySpeed = 5.0f;
 }
 
 // Called when the game starts or when spawned
@@ -161,6 +160,12 @@ void ABaseCharacter::DoTrace()
 		}
 		UE_LOG(LogTemp, Warning, TEXT("Nearest Actors Count: %d"), NearestActors.Num());
 	}
+}
+
+float ABaseCharacter::GetSpeed() const	// for animation blueprint
+{
+	float Speed = abs(GetVelocity().GetSafeNormal().Size());
+	return bIsPlayerRunning ? Speed : Speed * 0.7;
 }
 
 void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
