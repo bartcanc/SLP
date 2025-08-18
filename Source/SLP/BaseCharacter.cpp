@@ -43,6 +43,7 @@ ABaseCharacter::ABaseCharacter()
 	bIsPlayerRunning = false;
 	bResetCamera = false;
 	bIsRolling = false;
+	bCanRoll = true;
 }
 
 // Called when the game starts or when spawned
@@ -73,8 +74,6 @@ void ABaseCharacter::Tick(float DeltaTime)
 	{
 		HandleMovement(DeltaTime);
 	}
-
-	PerformRoll(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -338,13 +337,17 @@ void ABaseCharacter::Sprint(const FInputActionValue & Value)
 
 void ABaseCharacter::StartRoll(const FInputActionValue & Value)
 {
-	bIsRolling = true;
-	GetCharacterMovement()->GroundFriction = 0.0f;
-	GetCharacterMovement()->GravityScale = 0.0f;
-	UE_LOG(LogTemp, Display, TEXT("Roll started!"));
+	if(!bIsRolling and bCanRoll)
+	{
+		bIsRolling = true;
+		bCanRoll = false;
+		GetWorld() -> GetTimerManager().SetTimer(RollTimer, this, &ABaseCharacter::SetIsRolling, InvincibilityTime, false);
+		UE_LOG(LogTemp, Display, TEXT("Roll started!"));
+		PerformRoll();
+	}
 }
 
-void ABaseCharacter::PerformRoll(float DeltaTime)
+void ABaseCharacter::PerformRoll()
 {	// TODO: when dodging up the edge of a slope, the player is launched far away
     if (!bIsGrounded or !bIsRolling) return;
 
@@ -356,7 +359,7 @@ void ABaseCharacter::PerformRoll(float DeltaTime)
 
     if (GetVelocity().SizeSquared() == 0.0f) // backstep
     {
-       FVector Forward = FVector(Camera->GetForwardVector().X, Camera->GetForwardVector().Y, 0).GetSafeNormal();
+       	FVector Forward = FVector(Camera->GetForwardVector().X, Camera->GetForwardVector().Y, 0).GetSafeNormal();
         RollDirection = FVector::VectorPlaneProject(Forward, FloorNormal).GetSafeNormal();
         RollStrength = BackstepModifier;
     }
@@ -369,7 +372,15 @@ void ABaseCharacter::PerformRoll(float DeltaTime)
 	}
 
     LaunchCharacter(RollDirection * RollStrength, true, false);
-	GetCharacterMovement() -> GroundFriction = 8.f;
-	GetCharacterMovement() -> GravityScale = 1.0f;
+}
+
+void ABaseCharacter::SetIsRolling()
+{
     bIsRolling = false;
+	GetWorld() -> GetTimerManager().SetTimer(RollCooldownTimer, this, &ABaseCharacter::SetCanRoll, InvincibilityTime, false);
+}
+
+void ABaseCharacter::SetCanRoll()
+{
+	bCanRoll = true;
 }

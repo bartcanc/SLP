@@ -64,7 +64,7 @@ private:
 	void DetermineCameraPlacement(const struct FInputActionValue & Value);
 	void Sprint(const struct FInputActionValue & Value);
 	void StartRoll(const struct FInputActionValue & Value);
-	void PerformRoll(float DeltaTime);
+	void PerformRoll();
 
 	void ApplyMovement();
 	void LockOn();
@@ -74,6 +74,8 @@ private:
 	void HandleMovement(float DeltaTime);
 	void HandleLockOnCamera(float DeltaTime);
 	void DoTrace();
+	void SetIsRolling();
+	void SetCanRoll();
 
 	TArray<struct FHitResult> OutHits;
 	TArray<AActor*> NearestActors;
@@ -94,6 +96,15 @@ private:
 	UPROPERTY(EditAnywhere)
 	class UAnimBlueprint* PlayerAnimBP;
 
+	FTimerHandle RollTimer;
+	FTimerHandle RollCooldownTimer;
+
+	UPROPERTY(EditAnywhere)
+	float InvincibilityTime = 0.2f;
+
+	UPROPERTY(EditAnywhere)
+	float RollCooldown = 0.2f;
+
 	float MoveAxisValue;
 	float StrafeAxisValue;
 
@@ -103,6 +114,7 @@ private:
 	bool bResetCamera;
 	bool bCameraOnTheRightLockedOn;
 	bool bIsRolling;
+	bool bCanRoll;
 	
 	UPROPERTY(EditAnywhere)
 	float LockOnRange = 1000;
