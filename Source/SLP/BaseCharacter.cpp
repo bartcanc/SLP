@@ -168,6 +168,16 @@ float ABaseCharacter::GetSpeed() const	// for animation blueprint
 	return bIsPlayerRunning ? Speed : Speed * 0.7;
 }
 
+float ABaseCharacter::GetDirection() const	// for animation blueprint
+{
+	return StrafeAxisValue;
+}
+
+bool ABaseCharacter::IsLockedOn() const	// for animation blueprint
+{
+	return bIsLockedOn;
+}
+
 void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
 {
 	if(!NearestActors.IsEmpty())

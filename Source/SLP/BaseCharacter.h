@@ -124,4 +124,10 @@ private:
 
 	UFUNCTION(BlueprintPure)
 	float GetSpeed() const;
+
+	UFUNCTION(BlueprintPure)
+	float GetDirection() const;
+
+	UFUNCTION(BlueprintPure)
+	bool IsLockedOn() const;
 };
