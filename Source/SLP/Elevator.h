@@ -61,4 +61,8 @@ private:
 
 	FVector StartLocation;
 	FVector EndLocation;
+
+	bool bIsElevatorTriggered;;
+
+	void AnimateTrigger();
 };

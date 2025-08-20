@@ -214,12 +214,13 @@ void ABaseCharacter::HandleMovementWhenLockedOn(float DeltaTime, FRotator NewCon
 
 void ABaseCharacter::HandleMovement(float DeltaTime)
 {
+	//UE_LOG(LogTemp, Display, TEXT("velocity: %f"), GetVelocity().SizeSquared());
 	FVector Velocity = GetVelocity();
 	FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
 	FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
 
 	// if not locked on
-	if(bIsGrounded and Velocity.SizeSquared() > 0.0f) 
+	if(bIsGrounded and Velocity.SizeSquared() > 30000.0f) 	// changed to prevent a bug when walking into a wall (TODO: test on controller)
 	{
 		// if not falling and velocity is greater than 0
 		//  	set actor rotation to the new rotation

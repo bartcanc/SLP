@@ -6,6 +6,12 @@
 #include "GameFramework/Character.h"
 #include "BaseCharacter.generated.h"
 
+enum class PlayerCurrentState : uint8
+{
+	Default,
+	Ladder
+};
+
 UCLASS()
 class SLP_API ABaseCharacter : public ACharacter
 {
@@ -142,4 +148,6 @@ private:
 
 	UFUNCTION(BlueprintPure)
 	bool IsLockedOn() const;
+
+	PlayerCurrentState CurrentState;
 };
