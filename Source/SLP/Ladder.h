@@ -30,8 +30,17 @@ private:
 	class UBoxComponent* LadderDownCollision;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ladder", meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* LadderUpEndCollision;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ladder", meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* LadderDownEndCollision;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ladder", meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* LadderMesh;
 
 	float LadderHeight;
-	bool DetectPlayer();
+	AActor* DetectPlayer();
+	void CheckEnds();
+
+	AActor* PlayerActor;
 };

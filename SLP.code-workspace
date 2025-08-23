@@ -20,7 +20,8 @@
 			"DOTNET_ROLL_FORWARD": "LatestMajor"
 		},
 		"files.associations": {
-			"cstdlib": "cpp"
+			"cstdlib": "cpp",
+			"*.rh": "cpp"
 		}
 	},
 	"extensions": {

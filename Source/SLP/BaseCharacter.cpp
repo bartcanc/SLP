@@ -18,6 +18,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "Animation/AnimBlueprint.h"	
+#include "Ladder.h"
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -36,6 +37,7 @@ ABaseCharacter::ABaseCharacter()
 
 	MoveAxisValue = 0.0f;
 	StrafeAxisValue = 0.0f;	
+	MoveLadderValue = 0.0f;
 
 	bIsLockedOn = false;
 	bCameraOnTheRightLockedOn = false;
@@ -44,6 +46,9 @@ ABaseCharacter::ABaseCharacter()
 	bResetCamera = false;
 	bIsRolling = false;
 	bCanRoll = true;
+	bCanGoOnLadder = false;
+
+	SetCurrentState(PlayerCurrentState::Default);
 }
 
 // Called when the game starts or when spawned
@@ -59,20 +64,39 @@ void ABaseCharacter::BeginPlay()
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	UE_LOG(LogTemp, Warning, TEXT("velocity: %s"), *GetVelocity().ToString());
+	if(CurrentState == PlayerCurrentState::Ladder and abs(GetVelocity().Z) < 15.f) GetCharacterMovement() -> StopMovementImmediately();
+	// UE_LOG(LogTemp, Warning, TEXT("Current State: %s"), CurrentState == PlayerCurrentState::Default ? TEXT("Default") : TEXT("Ladder"));
+	// UE_LOG(LogTemp, Warning, TEXT("CanGoOnLadder: %s"), bCanGoOnLadder ? TEXT("true") : TEXT("false"));
 	
 	ApplyMovement();
 	MoveAxisValue = 0.0f;
     StrafeAxisValue = 0.0f;
-	bIsGrounded = !GetCharacterMovement() -> IsFalling();
+	MoveLadderValue = 0.0f;
 	
-	if(bIsLockedOn)
+	bIsGrounded = !GetCharacterMovement() -> IsFalling();
+	bCanGoOnLadder = CheckForLadder();
+
+	switch(CurrentState)
 	{
-		HandleLockOnCamera(DeltaTime);
-		ChangeCameraPositionWhenLockedOn(DeltaTime);
-	}
-	else
-	{
-		HandleMovement(DeltaTime);
+		case PlayerCurrentState::Default:
+		{
+			if(bIsLockedOn)
+			{
+				HandleLockOnCamera(DeltaTime);
+				ChangeCameraPositionWhenLockedOn(DeltaTime);
+			}
+			else
+			{
+				HandleMovement(DeltaTime);
+			}
+			break;
+		}
+		case PlayerCurrentState::Ladder:
+		{
+			
+			break;
+		}
 	}
 }
 
@@ -97,7 +121,20 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	PlayerEIComponent -> BindAction(InputRoll, ETriggerEvent::Completed, this, &ABaseCharacter::StartRoll);
 	PlayerEIComponent -> BindAction(InputRunDash, ETriggerEvent::Triggered, this, &ABaseCharacter::Sprint);
+	PlayerEIComponent -> BindAction(InputAction, ETriggerEvent::Triggered, this, &ABaseCharacter::Action);
 
+	PlayerEIComponent -> BindAction(InputMoveLadder, ETriggerEvent::Triggered, this, &ABaseCharacter::MoveLadder);
+	PlayerEIComponent -> BindAction(InputStopMoveLadder, ETriggerEvent::Triggered, this, &ABaseCharacter::StopLadder);
+}
+
+void ABaseCharacter::SetCurrentState(PlayerCurrentState NewState)
+{
+	CurrentState = NewState;
+}
+
+PlayerCurrentState ABaseCharacter::GetCurrentState() const
+{
+	return CurrentState;
 }
 
 void ABaseCharacter::HandleLockOnCamera(float DeltaTime)
@@ -241,23 +278,36 @@ void ABaseCharacter::Strafe(const FInputActionValue & Value)
 void ABaseCharacter::ApplyMovement()
 {
     if (!PlayerController) return;
+	
+	float SpeedScale = bIsPlayerRunning ? 1.0f : 0.7f;
+	switch(CurrentState){
+		case PlayerCurrentState::Default:
+		{
+			const FRotator Rotation = PlayerController -> GetControlRotation();
+			const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-    const FRotator Rotation = PlayerController->GetControlRotation();
-    const FRotator YawRotation(0, Rotation.Yaw, 0);
+			const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+			const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-    const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-    const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+			// determining the direction
+			FVector InputVector = (ForwardDirection * MoveAxisValue) + (RightDirection * StrafeAxisValue);
 
-	// determining the direction
-    FVector InputVector = (ForwardDirection * MoveAxisValue) + (RightDirection * StrafeAxisValue);
+			if (InputVector.SizeSquared() > 0.0f)
+			{
+				InputVector = InputVector.GetSafeNormal();
 
-    if (InputVector.SizeSquared() > 0.0f)
-    {
-        InputVector = InputVector.GetSafeNormal();
-
-        float SpeedScale = bIsPlayerRunning ? 1.0f : 0.7f;
-        AddMovementInput(InputVector, SpeedScale);
-    }
+				AddMovementInput(InputVector, RunSpeed * SpeedScale * GetWorld() -> GetDeltaSeconds());
+			}
+			break;
+		}
+		case PlayerCurrentState::Ladder:
+		{
+			// TODO: add sliding down
+			UE_LOG(LogTemp, Warning, TEXT("isplayerrunning: %s"), bIsPlayerRunning ? TEXT("true") : TEXT("false"));
+			AddMovementInput(FVector::UpVector, MoveLadderValue * SpeedScale * 20.f * GetWorld() -> GetDeltaSeconds());
+			break;
+		}
+	}
 }
 
 void ABaseCharacter::LockOn()	// refactored to use FInputActionValue
@@ -348,6 +398,21 @@ void ABaseCharacter::StartRoll(const FInputActionValue & Value)
 	}
 }
 
+void ABaseCharacter::Action(const struct FInputActionValue & Value)
+{
+	if(bCanGoOnLadder)
+	{
+		SetCurrentState(PlayerCurrentState::Ladder);
+		GetCharacterMovement() -> SetMovementMode(EMovementMode::MOVE_Flying);
+		bCanRoll = false;
+	}
+}
+
+void ABaseCharacter::MoveLadder(const struct FInputActionValue & Value)
+{
+	MoveLadderValue = Value.Get<float>();
+}
+
 void ABaseCharacter::PerformRoll()
 {	// TODO: when dodging up the edge of a slope, the player is launched far away
     if (!bIsGrounded or !bIsRolling) return;
@@ -384,4 +449,20 @@ void ABaseCharacter::SetIsRolling()
 void ABaseCharacter::SetCanRoll()
 {
 	bCanRoll = true;
+}
+
+bool ABaseCharacter::CheckForLadder()
+{
+	TArray<AActor*> Triggers;
+	GetOverlappingActors(Triggers, ALadder::StaticClass());
+	if(Triggers.Num() > 0)
+	{
+		return true;
+	}
+	return false;
+}
+
+void ABaseCharacter::StopLadder()
+{
+	if(CurrentState == PlayerCurrentState::Ladder) GetCharacterMovement() -> StopMovementImmediately();
 }

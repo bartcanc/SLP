@@ -32,6 +32,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
+	void SetCurrentState(PlayerCurrentState NewState);
+	PlayerCurrentState GetCurrentState() const;
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
     class UInputMappingContext * InputMapping;
@@ -63,6 +65,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
 	class UInputAction * InputRoll;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputMoveLadder;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputStopMoveLadder;
+
 	void Move(const struct FInputActionValue & Value);
 	void Strafe(const struct FInputActionValue & Value);
 	void LookUp(const struct FInputActionValue & Value);
@@ -70,6 +81,9 @@ private:
 	void DetermineCameraPlacement(const struct FInputActionValue & Value);
 	void Sprint(const struct FInputActionValue & Value);
 	void StartRoll(const struct FInputActionValue & Value);
+	void Action(const struct FInputActionValue & Value);
+
+	void MoveLadder(const struct FInputActionValue & Value);
 	void PerformRoll();
 
 	void ApplyMovement();
@@ -82,6 +96,8 @@ private:
 	void DoTrace();
 	void SetIsRolling();
 	void SetCanRoll();
+	bool CheckForLadder();
+	void StopLadder();
 
 	TArray<struct FHitResult> OutHits;
 	TArray<AActor*> NearestActors;
@@ -113,6 +129,7 @@ private:
 
 	float MoveAxisValue;
 	float StrafeAxisValue;
+	float MoveLadderValue;
 
 	bool bIsLockedOn;
 	bool bIsGrounded;
@@ -121,6 +138,7 @@ private:
 	bool bCameraOnTheRightLockedOn;
 	bool bIsRolling;
 	bool bCanRoll;
+	bool bCanGoOnLadder;
 	
 	UPROPERTY(EditAnywhere)
 	float LockOnRange = 1000;
@@ -129,7 +147,7 @@ private:
 	float SweepRadius = 300;
 	
 	UPROPERTY(EditAnywhere)
-	float RunSpeed = 20.f;
+	float RunSpeed = 30.f;
 	
 	UPROPERTY(EditAnywhere)
 	float BackstepModifier = -1500.f;
