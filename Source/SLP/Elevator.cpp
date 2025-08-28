@@ -35,7 +35,7 @@ void AElevator::BeginPlay()
 	
 	// UE_LOG(LogTemp, Display, TEXT("start location: %s"), *StartLocation.ToString());
 	// UE_LOG(LogTemp, Display, TEXT("end location: %s"), *EndLocation.ToString());
-
+	
 	switch (ElevatorStartPosition)
 	{
 		case true:
@@ -57,7 +57,7 @@ void AElevator::BeginPlay()
 void AElevator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
 	if(DetectPlayer() and !bIsElevatorTriggered)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Timer set! Activating elevator..."));

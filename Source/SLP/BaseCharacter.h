@@ -32,8 +32,12 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
-	void SetCurrentState(PlayerCurrentState NewState);
+	
 	PlayerCurrentState GetCurrentState() const;
+
+	void SetCurrentState(PlayerCurrentState NewState);
+	void SetIsRolling();
+	void SetCanRoll();
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
     class UInputMappingContext * InputMapping;
@@ -94,8 +98,6 @@ private:
 	void HandleMovement(float DeltaTime);
 	void HandleLockOnCamera(float DeltaTime);
 	void DoTrace();
-	void SetIsRolling();
-	void SetCanRoll();
 	bool CheckForLadder();
 	void StopLadder();
 
@@ -147,7 +149,7 @@ private:
 	float SweepRadius = 300;
 	
 	UPROPERTY(EditAnywhere)
-	float RunSpeed = 30.f;
+	float RunSpeed = 50.f;
 	
 	UPROPERTY(EditAnywhere)
 	float BackstepModifier = -1500.f;

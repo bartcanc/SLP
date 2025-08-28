@@ -120,6 +120,7 @@ void ALadder::CheckEnds()
 					PlayerChar -> GetCharacterMovement() -> SetMovementMode(EMovementMode::MOVE_Walking);
 					PlayerChar -> SetCurrentState(PlayerCurrentState::Default);
 					PlayerChar -> SetActorLocation(LadderDownCollision -> GetComponentLocation());
+					PlayerChar -> SetCanRoll();
 					PlayerActor = nullptr;
 				} 
 			} 
@@ -139,6 +140,7 @@ void ALadder::CheckEnds()
 					PlayerChar -> GetCharacterMovement() -> SetMovementMode(EMovementMode::MOVE_Walking);
 					PlayerChar -> SetCurrentState(PlayerCurrentState::Default);
 					PlayerChar -> SetActorLocation(LadderUpCollision -> GetComponentLocation());
+					PlayerChar -> SetCanRoll();
 					PlayerActor = nullptr;
 				} 
 			} 

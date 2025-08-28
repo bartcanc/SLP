@@ -64,7 +64,7 @@ void ABaseCharacter::BeginPlay()
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	UE_LOG(LogTemp, Warning, TEXT("velocity: %s"), *GetVelocity().ToString());
+	//UE_LOG(LogTemp, Warning, TEXT("canroll: %s"), bCanRoll ? TEXT("true") : TEXT("false"));
 	if(CurrentState == PlayerCurrentState::Ladder and abs(GetVelocity().Z) < 15.f) GetCharacterMovement() -> StopMovementImmediately();
 	// UE_LOG(LogTemp, Warning, TEXT("Current State: %s"), CurrentState == PlayerCurrentState::Default ? TEXT("Default") : TEXT("Ladder"));
 	// UE_LOG(LogTemp, Warning, TEXT("CanGoOnLadder: %s"), bCanGoOnLadder ? TEXT("true") : TEXT("false"));
@@ -304,7 +304,7 @@ void ABaseCharacter::ApplyMovement()
 		{
 			// TODO: add sliding down
 			UE_LOG(LogTemp, Warning, TEXT("isplayerrunning: %s"), bIsPlayerRunning ? TEXT("true") : TEXT("false"));
-			AddMovementInput(FVector::UpVector, MoveLadderValue * SpeedScale * 20.f * GetWorld() -> GetDeltaSeconds());
+			AddMovementInput(FVector::UpVector, MoveLadderValue * SpeedScale * RunSpeed * GetWorld() -> GetDeltaSeconds());
 			break;
 		}
 	}
