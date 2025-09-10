@@ -149,7 +149,7 @@ private:
 	float SweepRadius = 300;
 	
 	UPROPERTY(EditAnywhere)
-	float RunSpeed = 50.f;
+	float RunSpeed = 70.f;
 	
 	UPROPERTY(EditAnywhere)
 	float BackstepModifier = -1500.f;
