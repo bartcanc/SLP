@@ -193,4 +193,7 @@ private:
 
 	UFUNCTION(BlueprintCallable)
 	float GetHealth() const;
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsRolling() const;
 };	

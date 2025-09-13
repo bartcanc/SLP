@@ -229,6 +229,11 @@ float ABaseCharacter::GetHealth() const
 	return Health;
 }
 
+bool ABaseCharacter::GetIsRolling() const
+{
+	return bIsRolling;
+}
+
 void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
 {
 	if(!NearestActors.IsEmpty())
@@ -457,7 +462,7 @@ void ABaseCharacter::PerformRoll()
         RollStrength = RollModifier;
 	}
 
-    LaunchCharacter(RollDirection * RollStrength, true, false);
+    //LaunchCharacter(RollDirection * RollStrength, true, false);
 }
 
 void ABaseCharacter::SetIsRolling()
