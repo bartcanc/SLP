@@ -49,6 +49,9 @@ ABaseCharacter::ABaseCharacter()
 	bCanGoOnLadder = false;
 
 	SetCurrentState(PlayerCurrentState::Default);
+
+	Health = MaxHealth;
+	Stamina = MaxStamina;
 }
 
 // Called when the game starts or when spawned
@@ -125,6 +128,8 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	PlayerEIComponent -> BindAction(InputMoveLadder, ETriggerEvent::Triggered, this, &ABaseCharacter::MoveLadder);
 	PlayerEIComponent -> BindAction(InputStopMoveLadder, ETriggerEvent::Triggered, this, &ABaseCharacter::StopLadder);
+
+	PlayerEIComponent -> BindAction(InputLightAttack, ETriggerEvent::Triggered, this, &ABaseCharacter::LightAttack);
 }
 
 void ABaseCharacter::SetCurrentState(PlayerCurrentState NewState)
@@ -212,6 +217,16 @@ float ABaseCharacter::GetDirection() const	// for animation blueprint
 bool ABaseCharacter::IsLockedOn() const	// for animation blueprint
 {
 	return bIsLockedOn;
+}
+
+float ABaseCharacter::GetStamina() const
+{
+	return Stamina;
+}
+
+float ABaseCharacter::GetHealth() const
+{
+	return Health;
 }
 
 void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
@@ -406,6 +421,11 @@ void ABaseCharacter::Action(const struct FInputActionValue & Value)
 		GetCharacterMovement() -> SetMovementMode(EMovementMode::MOVE_Flying);
 		bCanRoll = false;
 	}
+}
+
+void ABaseCharacter::LightAttack(const struct FInputActionValue & Value)
+{
+	// TODO: attack logic
 }
 
 void ABaseCharacter::MoveLadder(const struct FInputActionValue & Value)

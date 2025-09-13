@@ -78,6 +78,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
 	class UInputAction * InputStopMoveLadder;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enhanced Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction * InputLightAttack;
+
 	void Move(const struct FInputActionValue & Value);
 	void Strafe(const struct FInputActionValue & Value);
 	void LookUp(const struct FInputActionValue & Value);
@@ -86,6 +89,7 @@ private:
 	void Sprint(const struct FInputActionValue & Value);
 	void StartRoll(const struct FInputActionValue & Value);
 	void Action(const struct FInputActionValue & Value);
+	void LightAttack(const struct FInputActionValue & Value);
 
 	void MoveLadder(const struct FInputActionValue & Value);
 	void PerformRoll();
@@ -170,4 +174,23 @@ private:
 	bool IsLockedOn() const;
 
 	PlayerCurrentState CurrentState;
-};
+
+	UPROPERTY(EditAnywhere)
+	float Health;
+	UPROPERTY(EditAnywhere)
+	float MaxHealth = 100.f;
+	UPROPERTY(EditAnywhere)
+	float Stamina;
+	UPROPERTY(EditAnywhere)
+	float MaxStamina = 100.f;
+	UPROPERTY(EditAnywhere)	
+	float StaminaRegenRate = 5.f;
+	UPROPERTY(EditAnywhere)
+	float StaminaConsumptionRate = 20.f;
+
+	UFUNCTION(BlueprintCallable)
+	float GetStamina() const;
+
+	UFUNCTION(BlueprintCallable)
+	float GetHealth() const;
+};	
