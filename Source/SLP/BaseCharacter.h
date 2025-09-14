@@ -126,6 +126,9 @@ private:
 
 	FTimerHandle RollTimer;
 	FTimerHandle RollCooldownTimer;
+	FTimerHandle StaminaRegenCooldown;
+
+	void DummyFun() {};
 
 	UPROPERTY(EditAnywhere)
 	float InvincibilityTime = 0.2f;
@@ -184,9 +187,11 @@ private:
 	UPROPERTY(EditAnywhere)
 	float MaxStamina = 100.f;
 	UPROPERTY(EditAnywhere)	
-	float StaminaRegenRate = 5.f;
+	float StaminaRegenRate = 10.f;
 	UPROPERTY(EditAnywhere)
 	float StaminaConsumptionRate = 20.f;
+
+	void RegenStamina(float DeltaTime);
 
 	UFUNCTION(BlueprintCallable)
 	float GetStamina() const;
@@ -196,4 +201,6 @@ private:
 
 	UFUNCTION(BlueprintCallable)
 	bool GetIsRolling() const;
-};	
+};
+
+	

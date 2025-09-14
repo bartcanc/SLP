@@ -101,6 +101,15 @@ void ABaseCharacter::Tick(float DeltaTime)
 			break;
 		}
 	}
+
+	if(bIsPlayerRunning)
+	{
+		Stamina -= StaminaConsumptionRate * DeltaTime;
+	}
+	else
+	{
+		RegenStamina(DeltaTime);	
+	}
 }
 
 // Called to bind functionality to input
@@ -217,6 +226,24 @@ float ABaseCharacter::GetDirection() const	// for animation blueprint
 bool ABaseCharacter::IsLockedOn() const	// for animation blueprint
 {
 	return bIsLockedOn;
+}
+
+void ABaseCharacter::RegenStamina(float DeltaTime)
+{
+	if(Stamina < 0)
+	{
+		Stamina = 0;
+		GetWorld() -> GetTimerManager().SetTimer(StaminaRegenCooldown, this, &ABaseCharacter::DummyFun, 1.f, false);
+	}
+	else
+	{
+		if(GetWorldTimerManager().IsTimerActive(StaminaRegenCooldown)) return;
+		if(Stamina < MaxStamina)
+		{
+			if(!bIsRolling) Stamina += StaminaRegenRate * DeltaTime;
+		} 
+		else Stamina = MaxStamina;
+	}
 }
 
 float ABaseCharacter::GetStamina() const
@@ -398,6 +425,11 @@ void ABaseCharacter::DetermineCameraPlacement(const FInputActionValue & Value)
 
 void ABaseCharacter::Sprint(const FInputActionValue & Value)
 {
+	if(Stamina <= 0)
+	{
+		bIsPlayerRunning = false;
+		return;
+	}
 	//UE_LOG(LogTemp, Display, TEXT("Velocity value: %f"), GetVelocity().SizeSquared());
 	if(GetVelocity().SizeSquared() > 0.0f)
 	{
@@ -408,12 +440,14 @@ void ABaseCharacter::Sprint(const FInputActionValue & Value)
 
 void ABaseCharacter::StartRoll(const FInputActionValue & Value)
 {
+	if(Stamina <= 0) return;
 	if(!bIsRolling and bCanRoll)
 	{
 		bIsRolling = true;
 		bCanRoll = false;
 		GetWorld() -> GetTimerManager().SetTimer(RollTimer, this, &ABaseCharacter::SetIsRolling, InvincibilityTime, false);
 		UE_LOG(LogTemp, Display, TEXT("Roll started!"));
+		Stamina -= StaminaConsumptionRate;
 		PerformRoll();
 	}
 }
