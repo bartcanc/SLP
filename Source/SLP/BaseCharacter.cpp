@@ -107,6 +107,12 @@ void ABaseCharacter::Tick(float DeltaTime)
 	}
 }
 
+void ABaseCharacter::ReceiveDamage(float DamageAmount)
+{
+	if(Health > 0) Health -= DamageAmount;
+	else Health = 0;
+}
+
 // Called to bind functionality to input
 void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
