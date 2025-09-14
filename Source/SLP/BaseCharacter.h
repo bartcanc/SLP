@@ -98,8 +98,7 @@ private:
 	void LockOn();
 	void ToggleEnemyWhenLockedOn(float AxisValue);
 	void ChangeCameraPositionWhenLockedOn(float DeltaTime);
-	void HandleMovementWhenLockedOn(float DeltaTime, FRotator NewControlRotation);
-	void HandleMovement(float DeltaTime);
+	void HandleCharacterRotation(float DeltaTime);
 	void HandleLockOnCamera(float DeltaTime);
 	void DoTrace();
 	bool CheckForLadder();

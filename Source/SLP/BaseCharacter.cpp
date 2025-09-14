@@ -91,13 +91,8 @@ void ABaseCharacter::Tick(float DeltaTime)
 			}
 			else
 			{
-				HandleMovement(DeltaTime);
+				HandleCharacterRotation(DeltaTime);
 			}
-			break;
-		}
-		case PlayerCurrentState::Ladder:
-		{
-			
 			break;
 		}
 	}
@@ -164,14 +159,24 @@ void ABaseCharacter::HandleLockOnCamera(float DeltaTime)
 		SpringArm -> SetRelativeLocation(FVector(0, 0, 80));
 		return;
 	}
-	FRotator TargetCameraRotation = DirectionVector.Rotation();
 
+	FRotator TargetCameraRotation = DirectionVector.Rotation();
 	FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
 	FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
 
 	PlayerController -> SetControlRotation(NewControlRotation);
     
-	HandleMovementWhenLockedOn(DeltaTime, NewControlRotation);
+	// if the player is not running
+	if(!bIsPlayerRunning)
+	{
+//  	set actor rotation to face the lock on point
+		SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));
+	}
+	else
+	{
+//  	set actor rotation to the new rotation
+		HandleCharacterRotation(DeltaTime);	// normal rotation when running
+	}
 }
 
 void ABaseCharacter::DoTrace()
@@ -273,6 +278,7 @@ void ABaseCharacter::ChangeCameraPositionWhenLockedOn(float DeltaTime)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("RightVector: %s"), *GetActorRightVector().ToString());
 
+	// not really necessary???? 
 	float Direction = 1;
 	if(bCameraOnTheRightLockedOn)	Direction = 1;	// right
 	else Direction = -1;	// left
@@ -281,22 +287,7 @@ void ABaseCharacter::ChangeCameraPositionWhenLockedOn(float DeltaTime)
 	SpringArm -> SetRelativeLocation(TLocation);
 }
 
-void ABaseCharacter::HandleMovementWhenLockedOn(float DeltaTime, FRotator NewControlRotation)
-{	
-// if the player is not running
-	if(!bIsPlayerRunning)
-	{
-//  	set actor rotation to face the lock on point
-		SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));
-	}
-	else
-	{
-//  	set actor rotation to the new rotation
-		HandleMovement(DeltaTime);	// normal rotation when running
-	}
-}
-
-void ABaseCharacter::HandleMovement(float DeltaTime)
+void ABaseCharacter::HandleCharacterRotation(float DeltaTime)
 {
 	//UE_LOG(LogTemp, Display, TEXT("velocity: %f"), GetVelocity().SizeSquared());
 	FVector Velocity = GetVelocity();
@@ -304,7 +295,7 @@ void ABaseCharacter::HandleMovement(float DeltaTime)
 	FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 20.0f);	// interpolation
 
 	// if not locked on
-	if(bIsGrounded and Velocity.SizeSquared() > 30000.0f) 	// changed to prevent a bug when walking into a wall (TODO: test on controller)
+	if(bIsGrounded and Velocity.SizeSquared() > 0.f) 	// changed to prevent a bug when walking into a wall (TODO: test on controller)
 	{
 		// if not falling and velocity is greater than 0
 		//  	set actor rotation to the new rotation
@@ -342,7 +333,6 @@ void ABaseCharacter::ApplyMovement()
 			if (InputVector.SizeSquared() > 0.0f)
 			{
 				InputVector = InputVector.GetSafeNormal();
-
 				AddMovementInput(InputVector, RunSpeed * SpeedScale * GetWorld() -> GetDeltaSeconds());
 			}
 			break;
@@ -389,7 +379,7 @@ void ABaseCharacter::LockOn()	// refactored to use FInputActionValue
 void ABaseCharacter::LookUp(const FInputActionValue & Value)	// refactored to use FInputActionValue
 {
 	float AxisValue = Value.Get<float>();
-	UE_LOG(LogTemp, Display, TEXT("Look Up value: %f"), AxisValue);
+	//UE_LOG(LogTemp, Display, TEXT("Look Up value: %f"), AxisValue);
 	if(!bIsLockedOn) AddControllerPitchInput(-AxisValue);
 }
 
@@ -397,8 +387,8 @@ void ABaseCharacter::LookRight(const FInputActionValue & Value)	// refactored to
 {
 	float AxisValue = Value.Get<float>();
 	//UE_LOG(LogTemp, Display, TEXT("Look Right value: %f"), AxisValue);
-	UE_LOG(LogTemp, Warning, TEXT("OutHits.Num(): %i"), NearestActors.Num()-1);
-	UE_LOG(LogTemp, Warning, TEXT("ClosestEnemy: %i"), ClosestEnemy);
+	// UE_LOG(LogTemp, Warning, TEXT("OutHits.Num(): %i"), NearestActors.Num()-1);
+	// UE_LOG(LogTemp, Warning, TEXT("ClosestEnemy: %i"), ClosestEnemy);
 
 	if(!bIsLockedOn) AddControllerYawInput(AxisValue);
 	else ToggleEnemyWhenLockedOn(AxisValue);
@@ -448,7 +438,7 @@ void ABaseCharacter::StartRoll(const FInputActionValue & Value)
 		GetWorld() -> GetTimerManager().SetTimer(RollTimer, this, &ABaseCharacter::SetIsRolling, InvincibilityTime, false);
 		UE_LOG(LogTemp, Display, TEXT("Roll started!"));
 		Stamina -= StaminaConsumptionRate;
-		PerformRoll();
+		//PerformRoll();
 	}
 }
 
@@ -472,29 +462,29 @@ void ABaseCharacter::MoveLadder(const struct FInputActionValue & Value)
 	MoveLadderValue = Value.Get<float>();
 }
 
-void ABaseCharacter::PerformRoll()
+void ABaseCharacter::PerformRoll()		// useless (will use animation to simulate roll. less trouble to work with potentially)
 {	// TODO: when dodging up the edge of a slope, the player is launched far away
-    if (!bIsGrounded or !bIsRolling) return;
+    // if (!bIsGrounded or !bIsRolling) return;
 
-    FVector RollDirection;
-    float RollStrength;
+    // FVector RollDirection;
+    // float RollStrength;
 
-	const FFindFloorResult& FloorResult = GetCharacterMovement()->CurrentFloor;
-    FVector FloorNormal = FloorResult.IsWalkableFloor() ? FloorResult.HitResult.ImpactNormal : FVector::UpVector;
+	// const FFindFloorResult& FloorResult = GetCharacterMovement()->CurrentFloor;
+    // FVector FloorNormal = FloorResult.IsWalkableFloor() ? FloorResult.HitResult.ImpactNormal : FVector::UpVector;
 
-    if (GetVelocity().SizeSquared() == 0.0f) // backstep
-    {
-       	FVector Forward = FVector(Camera->GetForwardVector().X, Camera->GetForwardVector().Y, 0).GetSafeNormal();
-        RollDirection = FVector::VectorPlaneProject(Forward, FloorNormal).GetSafeNormal();
-        RollStrength = BackstepModifier;
-    }
-    else // directional roll
-    {
-		FVector CurrentVelocity = GetVelocity();
-        FVector HorizontalVelocity = FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.f);
-		RollDirection = FVector::VectorPlaneProject(HorizontalVelocity.GetSafeNormal(), FloorNormal).GetSafeNormal();
-        RollStrength = RollModifier;
-	}
+    // if (GetVelocity().SizeSquared() == 0.0f) // backstep
+    // {
+    //    	FVector Forward = FVector(Camera->GetForwardVector().X, Camera->GetForwardVector().Y, 0).GetSafeNormal();
+    //     RollDirection = FVector::VectorPlaneProject(Forward, FloorNormal).GetSafeNormal();
+    //     RollStrength = BackstepModifier;
+    // }
+    // else // directional roll
+    // {
+	// 	FVector CurrentVelocity = GetVelocity();
+    //     FVector HorizontalVelocity = FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.f);
+	// 	RollDirection = FVector::VectorPlaneProject(HorizontalVelocity.GetSafeNormal(), FloorNormal).GetSafeNormal();
+    //     RollStrength = RollModifier;
+	// }
 
     //LaunchCharacter(RollDirection * RollStrength, true, false);
 }
