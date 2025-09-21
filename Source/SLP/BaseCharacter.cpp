@@ -84,15 +84,8 @@ void ABaseCharacter::Tick(float DeltaTime)
 	{
 		case PlayerCurrentState::Default:
 		{
-			if(bIsLockedOn)
-			{
-				HandleLockOnCamera(DeltaTime);
-				ChangeCameraPositionWhenLockedOn(DeltaTime);
-			}
-			else
-			{
-				HandleCharacterRotation(DeltaTime);
-			}
+			if(bIsLockedOn)	HandleLockOnCamera(DeltaTime);
+			else	HandleCharacterRotation(DeltaTime);
 			break;
 		}
 	}
@@ -170,10 +163,10 @@ void ABaseCharacter::HandleLockOnCamera(float DeltaTime)
 	FRotator CurrentControlRotation = PlayerController -> GetControlRotation();
 	FRotator NewControlRotation = FMath::RInterpTo(CurrentControlRotation, TargetCameraRotation, DeltaTime, 10.0f);
 
-	PlayerController -> SetControlRotation(NewControlRotation);
+	PlayerController -> SetControlRotation(NewControlRotation);	// camera rotation
     
-	// if the player is not running
-	if(!bIsPlayerRunning)
+	// if the player is not running or rolling
+	if(!bIsPlayerRunning and !bIsRolling)
 	{
 //  	set actor rotation to face the lock on point
 		SetActorRotation(FRotator(0, NewControlRotation.Yaw, 0));
@@ -280,19 +273,6 @@ void ABaseCharacter::ToggleEnemyWhenLockedOn(float AxisValue)
 	}
 }
 
-void ABaseCharacter::ChangeCameraPositionWhenLockedOn(float DeltaTime)
-{
-	//UE_LOG(LogTemp, Warning, TEXT("RightVector: %s"), *GetActorRightVector().ToString());
-
-	// not really necessary???? 
-	float Direction = 1;
-	if(bCameraOnTheRightLockedOn)	Direction = 1;	// right
-	else Direction = -1;	// left
-	
-	FVector TLocation = FMath::VInterpTo(SpringArm -> GetRelativeLocation(), FVector(0, Direction*20, 80), DeltaTime, 5.f);
-	SpringArm -> SetRelativeLocation(TLocation);
-}
-
 void ABaseCharacter::HandleCharacterRotation(float DeltaTime)
 {
 	//UE_LOG(LogTemp, Display, TEXT("velocity: %f"), GetVelocity().SizeSquared());
@@ -361,18 +341,17 @@ void ABaseCharacter::LockOn()	// refactored to use FInputActionValue
 	// was the trace successful?
 	if(!NearestActors.IsEmpty())
 	{
+		SpringArm -> SetRelativeLocation(FVector(0, 0, 80));
 		if(bIsLockedOn)	// if already locked on
 		{				// lock off and clear the array
 			UE_LOG(LogTemp, Warning, TEXT("Locked off..."));
 			bIsLockedOn = false;
 			NearestActors.Empty();
-			SpringArm -> SetRelativeLocation(FVector(0, 0, 80));
 		}
 		else
 		{				// lock on
 			UE_LOG(LogTemp, Warning, TEXT("Locked on!"));
 			bIsLockedOn = true;
-			SpringArm -> SetRelativeLocation(FVector(0, 20, 80));
 		}
 		ClosestEnemy = 0;
 	}
@@ -421,7 +400,7 @@ void ABaseCharacter::DetermineCameraPlacement(const FInputActionValue & Value)
 
 void ABaseCharacter::Sprint(const FInputActionValue & Value)
 {
-	if(Stamina <= 0)
+	if(Stamina <= 0 or !GetVelocity().SizeSquared())	// when out of stamina or not moving
 	{
 		bIsPlayerRunning = false;
 		return;
@@ -437,14 +416,21 @@ void ABaseCharacter::Sprint(const FInputActionValue & Value)
 void ABaseCharacter::StartRoll(const FInputActionValue & Value)
 {
 	if(Stamina <= 0) return;
+	if(GetVelocity().SizeSquared())
+	{
+		FVector Velocity = GetVelocity();
+		FRotator TargetRotation = FRotationMatrix::MakeFromX(Velocity).Rotator();		// target rotation from velocity vector
+		SetActorRotation(TargetRotation);
+	}
+	else return;
+
 	if(!bIsRolling and bCanRoll)
 	{
 		bIsRolling = true;
 		bCanRoll = false;
 		GetWorld() -> GetTimerManager().SetTimer(RollTimer, this, &ABaseCharacter::SetIsRolling, InvincibilityTime, false);
 		UE_LOG(LogTemp, Display, TEXT("Roll started!"));
-		Stamina -= StaminaConsumptionRate;
-		//PerformRoll();
+		Stamina -= StaminaConsumptionRate;	
 	}
 }
 
@@ -466,33 +452,6 @@ void ABaseCharacter::LightAttack(const struct FInputActionValue & Value)
 void ABaseCharacter::MoveLadder(const struct FInputActionValue & Value)
 {
 	MoveLadderValue = Value.Get<float>();
-}
-
-void ABaseCharacter::PerformRoll()		// useless (will use animation to simulate roll. less trouble to work with potentially)
-{	// TODO: when dodging up the edge of a slope, the player is launched far away
-    // if (!bIsGrounded or !bIsRolling) return;
-
-    // FVector RollDirection;
-    // float RollStrength;
-
-	// const FFindFloorResult& FloorResult = GetCharacterMovement()->CurrentFloor;
-    // FVector FloorNormal = FloorResult.IsWalkableFloor() ? FloorResult.HitResult.ImpactNormal : FVector::UpVector;
-
-    // if (GetVelocity().SizeSquared() == 0.0f) // backstep
-    // {
-    //    	FVector Forward = FVector(Camera->GetForwardVector().X, Camera->GetForwardVector().Y, 0).GetSafeNormal();
-    //     RollDirection = FVector::VectorPlaneProject(Forward, FloorNormal).GetSafeNormal();
-    //     RollStrength = BackstepModifier;
-    // }
-    // else // directional roll
-    // {
-	// 	FVector CurrentVelocity = GetVelocity();
-    //     FVector HorizontalVelocity = FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.f);
-	// 	RollDirection = FVector::VectorPlaneProject(HorizontalVelocity.GetSafeNormal(), FloorNormal).GetSafeNormal();
-    //     RollStrength = RollModifier;
-	// }
-
-    //LaunchCharacter(RollDirection * RollStrength, true, false);
 }
 
 void ABaseCharacter::SetIsRolling()
